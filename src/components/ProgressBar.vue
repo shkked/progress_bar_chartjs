@@ -5,12 +5,11 @@
 				<div ref="number" class="number">0%</div>
 			</div>
 		</div>
-
-		<svg width="400px" height="400px">
+		<!-- {{ [type, value] }} -->
+		<svg width="400px" height="400px" :style="{ '--progress-value': counter }">
 			<defs>
 				<linearGradient id="linearGradient">
-					<stop offset="0%" stop-color="darkorange" />
-					<stop offset="100%" stop-color="yellow" />
+					<stop offset="100%" :stop-color="strokeColor" />
 				</linearGradient>
 			</defs>
 			<circle cx="200" cy="200" r="190" transform="rotate(-90 200 200)" />
@@ -19,19 +18,48 @@
 </template>
 
 <script setup>
-import { ref } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
+import { mapTypeProgressBar } from "../helpers/mapTypeProgressBar"
 
+const props = defineProps({
+	type: {
+		type: String,
+		default: "in_progress",
+	},
+	value: {
+		type: Number,
+		default: 0,
+	},
+})
+
+const [strokeCounter, strokeColor] = computed(() =>
+	mapTypeProgressBar(props.type),
+).value
 const number = ref(null)
-const counter = ref(0)
-setInterval(() => {
-	if (counter.value === 100) {
-		clearInterval()
-		return
-	}
+const counter = ref(strokeCounter)
+let intervalId = null
 
-	counter.value++
-	number.value.innerText = counter.value + "%"
-}, 1000 / 100)
+const startAnimation = () => {
+	// counter.value = 0
+	if (intervalId) clearInterval(intervalId)
+
+	if (props.value <= 0) return
+
+	intervalId = setInterval(() => {
+		if (counter.value >= props.value) {
+			clearInterval(intervalId)
+			return
+		}
+		counter.value++
+		number.value.innerText = counter.value + "%"
+	}, 1000 / props.value)
+}
+
+watch(() => props.value, startAnimation)
+
+onMounted(() => {
+	startAnimation()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -41,21 +69,18 @@ setInterval(() => {
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	margin: 20px;
 	.outer {
 		width: 400px;
 		height: 400px;
 		border-radius: 50%;
-		//border: 1px solid #000;
 		background: rgb(213, 213, 213);
 		padding: 20px;
 		box-sizing: border-box;
-		//box-shadow: -1px -1px 5px 0 #7f7f7f, 3px 3px 5px #7f7f7f;
 		.inner {
 			width: 360px;
 			height: 360px;
 			border-radius: 50%;
-			//box-shadow: inset -1px -1px 5px 0 #7f7f7f, inset 3px 3px 5px #7f7f7f;
-			//border: #808080 1px solid;
 			background: #fff;
 			display: flex;
 			justify-content: center;
@@ -77,16 +102,16 @@ setInterval(() => {
 		fill: none;
 		stroke: url(#linearGradient);
 		stroke-width: 20px;
-		stroke-dasharray: 750;
-		stroke-dashoffset: 1165;
+		stroke-dasharray: calc(1194 * var(--progress-value) / 100) 1194;
+		stroke-dashoffset: 0;
 		stroke-linecap: round;
-		animation: progress_bar 1s ease forwards;
+		transition: stroke-dasharray 0.1s linear;
 	}
 }
 
 @keyframes progress_bar {
 	100% {
-		stroke-dashoffset: 407.75;
+		stroke-dasharray: calc(1194 * var(--progress-value) / 100) 1194;
 	}
 }
 </style>
