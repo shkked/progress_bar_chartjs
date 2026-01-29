@@ -1,19 +1,49 @@
 <template>
-	<div class="wrapper">
-		<div class="outer">
-			<div class="inner">
-				<div ref="number" class="number">0%</div>
+	<div>
+		<div class="wrapper">
+			<!-- {{ [typeProgressBar, strokeSettings, counter] }} -->
+			<div class="outer">
+				<div class="inner">
+					<div
+						v-if="typeProgressBar == 'in_progress'"
+						ref="number"
+						class="number"
+					>
+						{{ strokeSettings[0] + "%" }}
+					</div>
+					<div v-else ref="number" class="number">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="40"
+							height="40"
+							:fill="strokeSettings[1]"
+							viewBox="0 0 20 20"
+							preserveAspectRatio="xMidYMid meet"
+						>
+							<path :d="strokeSettings[2]" />
+						</svg>
+					</div>
+				</div>
 			</div>
+			<svg
+				width="400px"
+				height="400px"
+				:style="{ '--progress-value': counter }"
+			>
+				<defs>
+					<linearGradient id="linearGradient">
+						<stop offset="100%" :stop-color="strokeSettings[1]" />
+					</linearGradient>
+				</defs>
+				<circle cx="200" cy="200" r="190" transform="rotate(-90 200 200)" />
+			</svg>
 		</div>
-		<!-- {{ [type, value] }} -->
-		<svg width="400px" height="400px" :style="{ '--progress-value': counter }">
-			<defs>
-				<linearGradient id="linearGradient">
-					<stop offset="100%" :stop-color="strokeColor" />
-				</linearGradient>
-			</defs>
-			<circle cx="200" cy="200" r="190" transform="rotate(-90 200 200)" />
-		</svg>
+		<div class="container__buttons">
+			<button @click="setTypeProgressBar('in_progress')">In progress</button>
+			<button @click="setTypeProgressBar('error')">Error</button>
+			<button @click="setTypeProgressBar('warning')">Warning</button>
+			<button @click="setTypeProgressBar('success')">Success</button>
+		</div>
 	</div>
 </template>
 
@@ -32,15 +62,24 @@ const props = defineProps({
 	},
 })
 
-const [strokeCounter, strokeColor] = computed(() =>
-	mapTypeProgressBar(props.type),
-).value
+const typeProgressBar = ref(props.type)
 const number = ref(null)
-const counter = ref(strokeCounter)
+
+const strokeSettings = computed(() => mapTypeProgressBar(typeProgressBar.value))
+
+const counter = ref(strokeSettings.value[0])
 let intervalId = null
 
+const setTypeProgressBar = type => {
+	typeProgressBar.value = type
+}
+
+const getColorFilter = hexColor => {
+	// Используем drop-shadow для правильной окраски иконки
+	return `drop-shadow(0 0 0 ${hexColor})`
+}
+
 const startAnimation = () => {
-	// counter.value = 0
 	if (intervalId) clearInterval(intervalId)
 
 	if (props.value <= 0) return
@@ -56,6 +95,12 @@ const startAnimation = () => {
 }
 
 watch(() => props.value, startAnimation)
+watch(
+	() => typeProgressBar.value,
+	() => {
+		counter.value = strokeSettings.value[0]
+	},
+)
 
 onMounted(() => {
 	startAnimation()
@@ -91,6 +136,14 @@ onMounted(() => {
 				color: #808080;
 				font-size: 2.5rem;
 				font-weight: 400;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				svg {
+					display: block;
+					width: 40px;
+					height: 40px;
+				}
 			}
 		}
 	}
@@ -106,6 +159,19 @@ onMounted(() => {
 		stroke-dashoffset: 0;
 		stroke-linecap: round;
 		transition: stroke-dasharray 0.1s linear;
+	}
+}
+.container__buttons {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 20px;
+	button {
+		border-radius: 16px;
+		margin: 0 10px;
+		padding: 10px 20px;
+		font-size: 16px;
+		cursor: pointer;
 	}
 }
 
